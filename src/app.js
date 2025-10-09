@@ -1,0 +1,36 @@
+require('dotenv').config();
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+const connectDB = require('./config/db');
+const authRoutes = require('./routes/auth');
+const authMiddleware = require('./middlewares/authMiddleware');
+
+
+
+const app = express();
+
+// ✅ middlewares
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors({ origin: true, credentials: true }));
+app.use('/api/auth', authRoutes);
+
+
+// ✅ connect to MongoDB
+connectDB(process.env.MONGO_URI);
+
+// ✅ test route
+app.get('/', (req, res) => {
+  res.send('BWA Backend is running 🚀');
+});
+app.get('/api/protected', authMiddleware, (req, res) => {
+  res.json({
+    message: `Welcome ${req.user.id}, you have access ✅`,
+    role: req.user.role
+  });
+});
+
+// ✅ start server
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
