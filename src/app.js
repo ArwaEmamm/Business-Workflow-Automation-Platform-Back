@@ -4,7 +4,9 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
-const authMiddleware = require('./middlewares/authMiddleware');
+const { authMiddleware } = require('./middlewares/authMiddleware');
+const routes = require('./routes/routes');
+
 
 
 
@@ -15,6 +17,8 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: true, credentials: true }));
 app.use('/api/auth', authRoutes);
+app.use('/api', routes);
+
 
 
 // ✅ connect to MongoDB
