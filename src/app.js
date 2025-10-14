@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const { authMiddleware } = require('./middlewares/authMiddleware');
 const routes = require('./routes/routes');
+const errorHandler = require('./middlewares/errorMiddleware');
 
 
 
@@ -34,7 +35,9 @@ app.get('/api/protected', authMiddleware, (req, res) => {
     role: req.user.role
   });
 });
+app.use(errorHandler);
 
 // ✅ start server
 const PORT = process.env.PORT || 4000;
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

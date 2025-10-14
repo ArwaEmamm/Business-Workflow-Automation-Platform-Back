@@ -6,30 +6,29 @@ const getDashboardStats = async (req, res) => {
     const { id: userId, role } = req.user;
     let requests = [];
 
-    // 1️ الأدمن يشوف كل الطلبات
+    // 1️⃣ الأدمن يشوف كل الطلبات
     if (role === 'admin') {
-      requests = await Request.find();
+      requests = await Request.find().populate('workflowId', 'name steps');
     }
-    // 2️⃣ المدير يشوف الطلبات اللي الخطوة الحالية فيها assignedRole = 'manager'
+    // 2️⃣ المدير يشوف الطلبات اللي تخص خطوات المانجر
     else if (role === 'manager') {
       const workflows = await Workflow.find({ 'steps.assignedRole': 'manager' });
       const workflowIds = workflows.map(w => w._id);
 
-      // نجيب الطلبات اللي تنتمي للـworkflows دي، والخطوة الحالية فيها تخص المانجر
-      requests = await Request.find({
+      let managerRequests = await Request.find({
         workflowId: { $in: workflowIds },
-        status: 'pending'
-      }).populate('workflowId');
+        status: 'pending',
+      }).populate('workflowId', 'name steps');
 
-      // نفلتر الطلبات اللي فعلاً الخطوة الحالية ليها assignedRole = manager
-      requests = requests.filter(r => {
-        const currentStep = r.workflowId.steps[r.currentStep - 1];
+      // نفلتر الطلبات اللي الخطوة الحالية فيها تخص المانجر فعلاً
+      requests = managerRequests.filter(r => {
+        const currentStep = r.workflowId?.steps?.[r.currentStep - 1];
         return currentStep && currentStep.assignedRole === 'manager';
       });
     }
     // 3️⃣ الموظف يشوف الطلبات اللي عملها فقط
     else {
-      requests = await Request.find({ createdBy: userId });
+      requests = await Request.find({ createdBy: userId }).populate('workflowId', 'name');
     }
 
     // 4️⃣ لو مفيش طلبات
@@ -37,7 +36,7 @@ const getDashboardStats = async (req, res) => {
       return res.status(200).json({
         message: 'No requests found yet',
         summary: { total: 0, pending: 0, approved: 0, rejected: 0 },
-        recentRequests: []
+        recentRequests: [],
       });
     }
 
@@ -47,19 +46,20 @@ const getDashboardStats = async (req, res) => {
     const approved = requests.filter(r => r.status === 'approved').length;
     const rejected = requests.filter(r => r.status === 'rejected').length;
 
-    // 6️⃣ آخر 5 طلبات
-    const recentRequests = requests
-      .slice(-5)
-      .reverse()
+    // 6️⃣ آخر 5 طلبات (الأحدث أولًا)
+    const recentRequests = [...requests]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 5)
       .map(r => ({
         id: r._id,
         workflowName: r.workflowId?.name || 'Unknown Workflow',
         status: r.status,
-        createdAt: r.createdAt
+        createdAt: r.createdAt,
       }));
 
     // 7️⃣ نرجّع الرد
     res.status(200).json({
+      success: true,
       message:
         role === 'admin'
           ? 'Admin Dashboard'
@@ -67,7 +67,7 @@ const getDashboardStats = async (req, res) => {
           ? 'Manager Dashboard'
           : 'User Dashboard',
       summary: { total, pending, approved, rejected },
-      recentRequests
+      recentRequests,
     });
   } catch (error) {
     console.error('Dashboard error:', error);

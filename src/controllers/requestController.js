@@ -4,10 +4,13 @@ const Notification = require('../models/notification');
 const User = require('../models/User'); // عشان نقدر نجيب الـmanager/admin
 
 // ✅ إنشاء طلب جديد
+
 const createNewRequest = async (req, res) => {
   try {
     const createdBy = req.user.id;
     const { workflowId, data } = req.body;
+    const attachments = req.files ? req.files.map(file => file.filename) : [];
+
 
     // 1️⃣ نتأكد إن الـworkflow موجود
     const workflow = await Workflow.findById(workflowId);
@@ -23,6 +26,7 @@ const createNewRequest = async (req, res) => {
       currentStep: 1,
       status: 'pending',
       approvals: [],
+      attachments,
     });
 
     // 3️⃣ إشعار للـManager أو الـAdmin المسؤول عن أول خطوة

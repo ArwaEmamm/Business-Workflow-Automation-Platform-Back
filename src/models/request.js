@@ -39,11 +39,12 @@ const RequestSchema = new mongoose.Schema({
       date: { type: Date, default: Date.now }
     }
   ],
-
+ attachments: [String],
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-module.exports = mongoose.model('Request', RequestSchema);
+// Avoid OverwriteModelError when models are re-required in watch/dev environments
+module.exports = mongoose.models.Request || mongoose.model('Request', RequestSchema);
