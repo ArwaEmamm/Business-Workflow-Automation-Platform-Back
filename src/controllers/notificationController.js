@@ -1,10 +1,11 @@
 const Notification = require('../models/notification');
+const emailQueue = require('../jobs/emailQueue');
 
-// ✅ 1. إنشاء إشعار جديد (يُستخدم داخليًا)
+//  إنشاء إشعار جديد + إرسال إيميل في الخلفية
 const createNotification = async (req, res) => {
   try {
-    const userId = req.user.id; // من التوكن
-    const { message, type, meta } = req.body;
+    const userId = req.user.id;
+    const { message, type, meta, email } = req.body;
 
     const newNotification = await Notification.create({
       userId,
@@ -12,6 +13,11 @@ const createNotification = async (req, res) => {
       type,
       meta
     });
+
+    //  نضيف المهمة لطابور الإيميلات (شغالة في الخلفية)
+    if (email) {
+      await emailQueue.add({ email, message });
+    }
 
     res.status(201).json({
       message: 'Notification created successfully',
@@ -23,7 +29,7 @@ const createNotification = async (req, res) => {
   }
 };
 
-// ✅ 2. جلب الإشعارات الخاصة بالمستخدم
+// . جلب الإشعارات الخاصة بالمستخدم
 const getUserNotifications = async (req, res) => {
   try {
     const userId = req.user.id;

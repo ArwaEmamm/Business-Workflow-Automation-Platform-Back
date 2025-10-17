@@ -1,0 +1,29 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Uploads and build
+uploads/
+dist/
+coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Misc
+*.local
+
+# Ignore test database files (if any)
+*.db
