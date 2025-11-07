@@ -4,7 +4,7 @@ const emailQueue = require('../jobs/emailQueue');
 //  إنشاء إشعار جديد + إرسال إيميل في الخلفية
 const createNotification = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const { userId } = req.params;
     const { message, type, meta, email } = req.body;
 
     const newNotification = await Notification.create({

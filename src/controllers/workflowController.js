@@ -4,6 +4,13 @@ const createNewWorkflow = async (req, res) => {
   try {
     const { name, description, steps } = req.body;
 
+    // التحقق من صلاحية المستخدم
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      return res.status(403).json({ 
+        message: 'Only admins and managers can create workflows'
+      });
+    }
+
     // نجيب المستخدم اللي عامل الريكويست (من الـauthMiddleware)
     const createdBy = req.user.id;
 
@@ -31,23 +38,32 @@ const createNewWorkflow = async (req, res) => {
 
 const getAllWorkflows = async (req, res) => {
   try {
-    const user = req.user; // المستخدم الحالي من الـtoken
-    let workflows;
+    // كل المستخدمين يمكنهم رؤية جميع الـ workflows
+    const workflows = await Workflow.find()
+      .populate('createdBy', 'name email role')
+      .sort({ createdAt: -1 }); // ترتيب من الأحدث للأقدم
 
-    // 1️⃣ لو المستخدم Admin يشوف الكل
-    if (user.role === 'admin') {
-      workflows = await Workflow.find().populate('createdBy', 'name email role');
-    } else {
-      // 2️⃣ غير كده يشوف بس اللي هو عملها
-      workflows = await Workflow.find({ createdBy: user.id }).populate('createdBy', 'name email role');
-    }
-
-    // 3️⃣ نرجّع النتيجة
+    // نرجّع النتيجة
     res.status(200).json({
       message: 'Workflows fetched successfully ✅',
       count: workflows.length,
       workflows,
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Compatibility endpoint: return workflows array only (useful for frontends expecting an array)
+const getWorkflowsList = async (req, res) => {
+  try {
+    // كل المستخدمين المصرح لهم يمكنهم رؤية قائمة الـ workflows
+    const workflows = await Workflow.find()
+      .populate('createdBy', 'name email role')
+      .sort({ createdAt: -1 }); // ترتيب من الأحدث للأقدم
+
+    res.status(200).json(workflows);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -136,6 +152,7 @@ const deleteWorkflow = async (req, res) => {
 };
 
 
-module.exports = { createNewWorkflow,getAllWorkflows,getSingleWorkflowById,updateWorkflow,deleteWorkflow};
+module.exports = { createNewWorkflow, getAllWorkflows, getWorkflowsList, getSingleWorkflowById, updateWorkflow, deleteWorkflow };
+
 
 

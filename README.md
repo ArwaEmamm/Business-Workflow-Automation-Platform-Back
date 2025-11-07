@@ -134,6 +134,50 @@ npm test
 
 ---
 
+## 🛠️ Troubleshooting — MongoDB "authentication failed" (bad auth)
+
+If you see an error like:
+
+```
+❌ MongoDB connection failed: bad auth : authentication failed
+```
+
+Follow these steps:
+
+1. Check your `MONGO_URI` in your local `.env` file:
+	- Make sure it includes a valid username and password if your MongoDB requires authentication.
+	- Example format (with authSource):
+	  ```text
+	  mongodb://<username>:<password>@<host>:27017/<database>?authSource=admin
+	  ```
+	- If you use MongoDB Atlas, use the connection string provided by Atlas (paste it into `MONGO_URI`).
+
+2. Quick local connection test (PowerShell):
+	- Temporarily set the env var and run a tiny Node test to see the error details:
+	  ```powershell
+	  $env:MONGO_URI='mongodb://user:pass@host:27017/dbname?authSource=admin'
+	  node -e "require('mongoose').connect(process.env.MONGO_URI).then(()=>console.log('OK')).catch(e=>{console.error(e); process.exit(1)})"
+	  ```
+	- This prints the driver error and helps identify whether the credentials, host, or network are the problem.
+
+3. Common causes & fixes:
+	- Wrong username/password — re-create or reset the database user and try again.
+	- Wrong authSource — many managed MongoDBs require `authSource=admin` or a specific DB for authentication.
+	- IP whitelist/network — ensure your machine's IP (or CI runner) is allowed by the DB server (Atlas has IP whitelist).
+	- Connection string encoding — if your password contains special characters, URL-encode them.
+
+4. If `.env` was accidentally pushed previously:
+	- Treat those credentials as compromised: rotate the DB user password and any keys that were exposed.
+	- We removed `.env` from tracking and added it to `.gitignore` — if you want to purge the secret from repo history I can prepare `BFG` or `git filter-repo` steps (this requires force-push and all collaborators to re-clone).
+
+5. Still failing? Share (safely) the connection string host and sanitized error message and I can help diagnose (don't paste secrets).
+
+---
+
+Tip: I've added a `.env.example` file to the repo with placeholders for the required environment variables. Copy it to `.env` and fill real values.
+
+---
+
 ## ✅ API Highlights
 
 | Method | Endpoint | Description | Auth |

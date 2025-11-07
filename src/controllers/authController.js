@@ -5,11 +5,23 @@ const jwt = require('jsonwebtoken');
 // ✅ تسجيل مستخدم جديد
 exports.register = async (req, res) => {
   try {
+    console.log('Register request body:', req.body);
+    
+    if (!req.body) {
+      return res.status(400).json({ 
+        message: 'Request body is missing',
+        received: req.body
+      });
+    }
+
     const { name, email, password, role } = req.body;
 
     // 1️⃣ نتأكد إن كل الحقول الأساسية وصلت
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please fill all required fields' });
+      return res.status(400).json({ 
+        message: 'Please fill all required fields',
+        received: { name, email, password: password ? '(provided)' : undefined }
+      });
     }
 
     // 2️⃣ نتحقق هل المستخدم موجود مسبقًا
@@ -22,12 +34,16 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
 
-    // 4️⃣ ننشئ المستخدم الجديد
+    // 4️⃣ نتأكد إن قيمة role مقبولة وإلا نستخدم 'employee' كافتراضي
+    const allowedRoles = ['admin', 'manager', 'employee'];
+    const roleToUse = allowedRoles.includes(role) ? role : 'employee';
+
+    // 5️⃣ ننشئ المستخدم الجديد
     const newUser = await User.create({
       name,
       email,
       passwordHash: hash,
-      role
+      role: roleToUse
     });
 
     // 5️⃣ نولّد له access token (علشان يفضل مسجل بعد التسجيل)
@@ -50,6 +66,10 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    // If it's a Mongoose validation error, return 400 with details
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message, errors: error.errors });
+    }
     res.status(500).json({ message: 'Server error' });
   }
 };

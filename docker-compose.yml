@@ -1,0 +1,2 @@
+# docker-compose removed per project preference (user requested not to use Docker)
+# If you change your mind you can recreate this file to run a local MongoDB for testing.

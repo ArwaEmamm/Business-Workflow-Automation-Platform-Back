@@ -7,10 +7,51 @@ const User = require('../models/User'); // عشان نقدر نجيب الـmana
 
 const createNewRequest = async (req, res) => {
   try {
+    console.log('Creating new request:', {
+      body: req.body,
+      files: req.files
+    });
+    
     const createdBy = req.user.id;
-    const { workflowId, data } = req.body;
-    const attachments = req.files ? req.files.map(file => file.filename) : [];
+    const { workflowId } = req.params;
+    const { title, description } = req.body;
 
+    // 1️⃣ التحقق من البيانات المطلوبة
+    if (!title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'عنوان الطلب ووصفه مطلوبين',
+        receivedData: { title, description }
+      });
+    }
+
+    // معالجة الملفات المرفقة
+    let attachmentFiles = [];
+    if (req.files && req.files.attachments) {
+      attachmentFiles = req.files.attachments.map(file => ({
+        filename: file.filename,
+        originalname: file.originalname,
+        path: file.path,
+        mimetype: file.mimetype
+      }));
+    }
+
+    // 2️⃣ تجهيز الملفات المرفقة
+    let attachments = [];
+    if (req.files && req.files.length > 0) {
+      attachments = req.files.map(file => ({
+        filename: file.filename,
+        originalname: file.originalname,
+        mimetype: file.mimetype
+      }));
+    }
+
+    // 3️⃣ تجميع بيانات الطلب
+    const requestData = {
+      title: req.body.title,
+      description: req.body.description,
+      attachmentDetails: attachments
+    };
 
     // 1️⃣ نتأكد إن الـworkflow موجود
     const workflow = await Workflow.findById(workflowId);
@@ -18,16 +59,25 @@ const createNewRequest = async (req, res) => {
       return res.status(404).json({ message: 'Workflow not found' });
     }
 
-    // 2️⃣ ننشئ الطلب
+    // 4️⃣ ننشئ الطلب
     const newRequest = await Request.create({
       workflowId,
       createdBy,
-      data,
+      data: {
+        title,
+        description,
+        attachmentDetails: attachmentFiles
+      },
       currentStep: 1,
       status: 'pending',
       approvals: [],
-      attachments,
+      attachments: attachmentFiles.map(file => file.filename)
     });
+
+    // 5️⃣ نجيب الطلب مع كل البيانات المرتبطة
+    const populatedRequest = await Request.findById(newRequest._id)
+      .populate('workflowId', 'name description steps')
+      .populate('createdBy', 'name email');
 
     // 3️⃣ إشعار للـManager أو الـAdmin المسؤول عن أول خطوة
     const firstStep = workflow.steps[0];
@@ -43,9 +93,31 @@ const createNewRequest = async (req, res) => {
       }
     }
 
+    // نجيب الطلب بشكل مباشر
+    // 6️⃣ نجهز الرد
     res.status(201).json({
-      message: 'Request created successfully ✅',
-      request: newRequest,
+      success: true,
+      message: 'تم إنشاء الطلب بنجاح ✅',
+      request: {
+        id: populatedRequest._id,
+        title: populatedRequest.data.title,
+        description: populatedRequest.data.description,
+        status: populatedRequest.status,
+        currentStep: populatedRequest.currentStep,
+        attachments: populatedRequest.data.attachmentDetails,
+        workflow: {
+          id: populatedRequest.workflowId._id,
+          name: populatedRequest.workflowId.name,
+          description: populatedRequest.workflowId.description,
+          currentStepDetails: populatedRequest.workflowId.steps[populatedRequest.currentStep - 1]
+        },
+        createdBy: {
+          id: populatedRequest.createdBy._id,
+          name: populatedRequest.createdBy.name,
+          email: populatedRequest.createdBy.email
+        },
+        createdAt: populatedRequest.createdAt
+      }
     });
   } catch (error) {
     console.error(error);
@@ -108,21 +180,70 @@ const handleApproval = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
+    // التحقق من وجود البيانات المطلوبة
+    if (!decision) {
+      return res.status(400).json({ 
+        message: 'Decision is required',
+        details: 'Please provide a decision (approved/rejected)'
+      });
+    }
+
+    if (!['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({ 
+        message: 'Invalid decision value',
+        details: 'Decision must be either "approved" or "rejected"'
+      });
+    }
+
+    console.log(`Processing approval request - ID: ${requestId}, User: ${userId}, Role: ${userRole}, Decision: ${decision}`);
+
     // 1️⃣ نجيب الطلب من قاعدة البيانات
-    const request = await Request.findById(requestId).populate('workflowId');
+    const request = await Request.findById(requestId);
     if (!request) {
-      return res.status(404).json({ message: 'Request not found' });
+      console.log(`Request not found - ID: ${requestId}`);
+      return res.status(404).json({ 
+        message: 'Request not found',
+        details: 'The specified request ID does not exist'
+      });
+    }
+
+    // نجيب معلومات الـworkflow
+    await request.populate('workflowId');
+    if (!request.workflowId) {
+      console.log(`Workflow not found for request - ID: ${requestId}`);
+      return res.status(400).json({ 
+        message: 'Workflow not found',
+        details: 'The workflow associated with this request does not exist'
+      });
     }
 
     // 2️⃣ نجيب الخطوة الحالية
     const currentStep = request.workflowId.steps[request.currentStep - 1];
     if (!currentStep) {
-      return res.status(400).json({ message: 'Invalid current step' });
+      console.log(`Invalid step for request - ID: ${requestId}, Current Step: ${request.currentStep}`);
+      return res.status(400).json({ 
+        message: 'Invalid current step',
+        details: `No step found at position ${request.currentStep}`
+      });
     }
 
     // 3️⃣ نتحقق إن المستخدم هو المسؤول عن الخطوة دي
-    if (currentStep.assignedRole !== userRole) {
-      return res.status(403).json({ message: 'You are not allowed to approve this step' });
+    if (currentStep.assignedRole !== userRole && userRole !== 'admin') {
+      console.log(`Permission denied - User Role: ${userRole}, Required Role: ${currentStep.assignedRole}`);
+      return res.status(403).json({ 
+        message: 'You are not allowed to approve this step',
+        details: `This step requires ${currentStep.assignedRole} role access`
+      });
+    }
+
+    // نتحقق من عدم وجود موافقة سابقة على نفس الخطوة
+    const existingApproval = request.approvals.find(a => a.stepOrder === request.currentStep);
+    if (existingApproval) {
+      console.log(`Step already processed - Request: ${requestId}, Step: ${request.currentStep}`);
+      return res.status(400).json({ 
+        message: 'Step already processed',
+        details: 'This step has already been approved or rejected'
+      });
     }
 
     // 4️⃣ نضيف approval جديد
@@ -134,6 +255,7 @@ const handleApproval = async (req, res) => {
       date: new Date()
     };
     request.approvals.push(approval);
+    console.log(`Adding approval - Request: ${requestId}, Step: ${request.currentStep}, Decision: ${decision}`);
 
     // 5️⃣ نحدّث الحالة
     if (decision === 'rejected') {
