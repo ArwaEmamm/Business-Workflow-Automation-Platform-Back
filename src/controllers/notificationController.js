@@ -1,76 +1,189 @@
 const Notification = require('../models/notification');
-const emailQueue = require('../jobs/emailQueue');
+let emailQueue = null;
 
-//  إنشاء إشعار جديد + إرسال إيميل في الخلفية
-const createNotification = async (req, res) => {
+try {
+  const eq = require('../jobs/emailQueue');
+  emailQueue = eq.emailQueue;
+} catch (err) {
+  console.warn('[NotificationController] Email queue not available:', err.message);
+}
+
+/**
+ * Utility function to create a notification and queue an email
+ * @param {ObjectId} userId - ID of the user to notify
+ * @param {String} message - Notification message
+ * @param {String} type - Type of notification (request-created|request-approved|request-rejected|workflow-step-assigned)
+ * @param {Object} meta - Metadata (requestId, workflowId, etc.)
+ * @returns {Promise<Object>} - Created notification document
+ */
+const createNotification = async (userId, message, type, meta = {}) => {
   try {
-    const { userId } = req.params;
-    const { message, type, meta, email } = req.body;
+    if (!userId || !message || !type) {
+      throw new Error('userId, message, and type are required');
+    }
 
-    const newNotification = await Notification.create({
+    const notification = await Notification.create({
       userId,
       message,
       type,
       meta
     });
 
-    //  نضيف المهمة لطابور الإيميلات (شغالة في الخلفية)
-    if (email) {
-      await emailQueue.add({ email, message });
+    // Queue email notification job if emailQueue is available
+    if (emailQueue) {
+      try {
+        await emailQueue.add(
+          {
+            userId,
+            message,
+            type,
+            meta,
+            notificationId: notification._id
+          },
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000
+            }
+          }
+        );
+      } catch (queueErr) {
+        console.warn('[Notification] Failed to queue email job:', queueErr.message);
+      }
     }
 
-    res.status(201).json({
-      message: 'Notification created successfully',
-      notification: newNotification
-    });
+    console.log(`[Notification] Created for user ${userId}: ${type}`);
+    return notification;
   } catch (error) {
-    console.error('Error creating notification:', error);
-    res.status(500).json({ message: 'Server error while creating notification' });
+    console.error('[Notification] Error creating notification:', error.message);
+    throw error;
   }
 };
 
-// . جلب الإشعارات الخاصة بالمستخدم
+/**
+ * GET /notifications - Get all notifications for logged-in user
+ */
 const getUserNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
-    const notifications = await Notification.find({ userId }).sort({ createdAt: -1 });
 
-    res.status(200).json({
-      message: 'User notifications fetched successfully',
+    const notifications = await Notification.find({ userId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      message: 'Notifications retrieved successfully',
       count: notifications.length,
-      notifications
+      data: notifications
     });
   } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({ message: 'Server error while fetching notifications' });
+    console.error('[Notification] Error fetching notifications:', error.message);
+    res.status(500).json({ message: 'Error fetching notifications' });
   }
 };
 
-// ✅ 3. تحديد إشعار كمقروء
+/**
+ * GET /notifications/unread/count - Get count of unread notifications
+ */
+const getUnreadCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const count = await Notification.countDocuments({
+      userId,
+      isRead: false
+    });
+
+    res.json({
+      message: 'Unread count retrieved',
+      unreadCount: count
+    });
+  } catch (error) {
+    console.error('[Notification] Error counting unread:', error.message);
+    res.status(500).json({ message: 'Error counting unread notifications' });
+  }
+};
+
+/**
+ * PATCH /notifications/:id/read - Mark a notification as read
+ */
 const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
-    const notification = await Notification.findById(id);
+    const userId = req.user.id;
+
+    const notification = await Notification.findOneAndUpdate(
+      { _id: id, userId },
+      { isRead: true },
+      { new: true }
+    );
 
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
-    notification.isRead = true;
-    await notification.save();
-
-    res.status(200).json({
+    res.json({
       message: 'Notification marked as read',
-      notification
+      data: notification
     });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({ message: 'Server error while updating notification' });
+    console.error('[Notification] Error marking as read:', error.message);
+    res.status(500).json({ message: 'Error marking notification as read' });
+  }
+};
+
+/**
+ * PATCH /notifications/read-all - Mark all notifications as read
+ */
+const markAllAsRead = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await Notification.updateMany(
+      { userId, isRead: false },
+      { isRead: true }
+    );
+
+    res.json({
+      message: 'All notifications marked as read',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('[Notification] Error marking all as read:', error.message);
+    res.status(500).json({ message: 'Error marking all notifications as read' });
+  }
+};
+
+/**
+ * DELETE /notifications/:id - Delete a notification
+ */
+const deleteNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const notification = await Notification.findOneAndDelete({
+      _id: id,
+      userId
+    });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    res.json({ message: 'Notification deleted successfully' });
+  } catch (error) {
+    console.error('[Notification] Error deleting notification:', error.message);
+    res.status(500).json({ message: 'Error deleting notification' });
   }
 };
 
 module.exports = {
   createNotification,
   getUserNotifications,
-  markAsRead
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification
 };

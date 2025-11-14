@@ -6,6 +6,7 @@ const authRoutes = require('./auth');
 const usersRoutes = require('./users');
 const workflowsRoutes = require('./workflows');
 const requestsRoutes = require('./requests');
+const notificationsRoutes = require('./notifications');
 const dashboardController = require('../controllers/dashboaredController');
 const settingsController = require('../controllers/settingsController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
@@ -15,6 +16,7 @@ router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
 router.use('/workflows', workflowsRoutes);
 router.use('/requests', requestsRoutes);
+router.use('/notifications', notificationsRoutes);
 
 // Dashboard route
 router.get('/dashboard', authMiddleware, dashboardController.getDashboardStats);

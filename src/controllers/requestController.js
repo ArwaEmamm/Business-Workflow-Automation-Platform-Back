@@ -1,7 +1,8 @@
 const Request = require('../models/request');
 const Workflow = require('../models/Workflow');
 const Notification = require('../models/notification');
-const User = require('../models/User'); // عشان نقدر نجيب الـmanager/admin
+const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // ✅ إنشاء طلب جديد
 
@@ -62,17 +63,21 @@ const createNewRequest = async (req, res) => {
       .populate('createdBy', 'name email');
 
     // Notify reviewer of first step
-    const firstStep = workflow.steps && workflow.steps[0];
-    if (firstStep && firstStep.assignedRole) {
-      const reviewer = await User.findOne({ role: firstStep.assignedRole });
-      if (reviewer) {
-        await Notification.create({
-          userId: reviewer._id,
-          message: `📄 طلب جديد (${workflow.name}) تم إنشاؤه من قِبل مستخدم وينتظر المراجعة.`,
-          type: 'request_created',
-          meta: { requestId: newRequest._id }
-        });
+    try {
+      const firstStep = workflow.steps && workflow.steps[0];
+      if (firstStep && firstStep.assignedRole) {
+        const reviewers = await User.find({ role: firstStep.assignedRole });
+        for (const reviewer of reviewers) {
+          await createNotification(
+            reviewer._id,
+            `📄 New request "${title}" awaits your review at step 1`,
+            'request-created',
+            { requestId: newRequest._id, workflowId: workflow._id, stepOrder: 1 }
+          );
+        }
       }
+    } catch (notifErr) {
+      console.warn('[Request] Failed to send creation notification:', notifErr.message);
     }
 
     // Return created request
@@ -339,22 +344,60 @@ const handleApproval = async (req, res) => {
       return res.status(500).json({ message: 'Failed to update request' });
     }
 
-    // 6️⃣ إشعارات بعد القرار
-    // ⬅️ إشعار لصاحب الطلب
-    await Notification.create({
-      userId: updatedRequest.createdBy,
-      message: `طلبك رقم (${updatedRequest._id}) تم ${decision === 'approved' ? 'الموافقة عليه' : 'رفضه'} من قِبل ${userRole}.`,
-      type: decision,
-      meta: { requestId: updatedRequest._id }
-    });
+    // 6️⃣ Send notifications based on approval outcome
+    try {
+      // Get employee (request creator)
+      const employee = await User.findById(updatedRequest.createdBy);
+      const approver = await User.findById(userId);
 
-    // ⬅️ إشعارات للشخص اللي وافق
-    await Notification.create({
-      userId,
-      message: `تم تسجيل قرارك (${decision}) على الطلب رقم (${updatedRequest._id}).`,
-      type: 'confirmation',
-      meta: { requestId: updatedRequest._id }
-    });
+      // Notify employee
+      if (employee) {
+        const message = decision === 'approved'
+          ? `✅ Your request has been approved at step ${request.currentStep}`
+          : `❌ Your request has been rejected at step ${request.currentStep}`;
+        
+        await createNotification(
+          employee._id,
+          message,
+          decision === 'approved' ? 'request-approved' : 'request-rejected',
+          { requestId: updatedRequest._id, stepOrder: request.currentStep, approverRole: userRole }
+        );
+      }
+
+      // If decision is approved and there's a next step, notify next reviewer
+      if (decision === 'approved' && request.currentStep < (request.workflowId.steps?.length || 0)) {
+        const nextStep = request.workflowId.steps[request.currentStep];
+        if (nextStep && nextStep.assignedRole) {
+          const nextReviewers = await User.find({ role: nextStep.assignedRole });
+          for (const reviewer of nextReviewers) {
+            await createNotification(
+              reviewer._id,
+              `📋 A new request awaits your review at step ${request.currentStep + 1}`,
+              'workflow-step-assigned',
+              { requestId: updatedRequest._id, stepOrder: request.currentStep + 1, assignedRole: nextStep.assignedRole }
+            );
+          }
+        }
+      }
+
+      // If this is final step and approved, notify HR_MANAGER
+      if (decision === 'approved' && request.currentStep >= (request.workflowId.steps?.length || 0)) {
+        const hrManagers = await User.find({ role: 'hr_manager' });
+        for (const hrManager of hrManagers) {
+          await createNotification(
+            hrManager._id,
+            `🎯 A request has been fully approved and requires final HR sign-off`,
+            'workflow-step-assigned',
+            { requestId: updatedRequest._id, stepOrder: 'final', requiresHrApproval: true }
+          );
+        }
+      }
+
+      console.log(`[Approval] Notifications sent for request ${requestId}`);
+    } catch (notifErr) {
+      console.warn('[Approval] Failed to send notifications:', notifErr.message);
+      // Continue - notifications are nice-to-have but shouldn't fail the approval
+    }
 
     return res.status(200).json({
       message: `Step ${decision} successfully`,
