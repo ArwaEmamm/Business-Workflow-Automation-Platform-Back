@@ -7,7 +7,7 @@ const getDashboardStats = async (req, res) => {
     let requests = [];
 
     // 1️⃣ الأدمن يشوف كل الطلبات
-    if (role === 'admin') {
+    if (role === 'hr_manager') {
       requests = await Request.find().populate('workflowId', 'name steps');
     }
     // 2️⃣ المدير يشوف الطلبات اللي تخص خطوات المانجر
@@ -61,8 +61,8 @@ const getDashboardStats = async (req, res) => {
     res.status(200).json({
       success: true,
       message:
-        role === 'admin'
-          ? 'Admin Dashboard'
+        role === 'hr_manager'
+          ? 'HR Manager Dashboard'
           : role === 'manager'
           ? 'Manager Dashboard'
           : 'User Dashboard',

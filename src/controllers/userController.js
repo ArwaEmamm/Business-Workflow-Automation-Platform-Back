@@ -5,10 +5,10 @@ const Request = require('../models/request');
 const getAllUsers = async (req, res) => {
     try {
         // التحقق من أن المستخدم admin
-        if (req.user.role !== 'admin') {
+        if (req.user.role !== 'hr_manager') {
             return res.status(403).json({ 
-                success: false, 
-                message: 'Access denied. Admin only.' 
+                success: false,
+                message: 'Access denied. hr_manager only.'
             });
         }
 
@@ -45,10 +45,10 @@ const getAllUsers = async (req, res) => {
 const getAllRequests = async (req, res) => {
     try {
         // التحقق من أن المستخدم admin
-        if (req.user.role !== 'admin') {
+        if (req.user.role !== 'hr_manager') {
             return res.status(403).json({ 
                 success: false, 
-                message: 'Access denied. Admin only.' 
+                message: 'Access denied. hr_manager only.' 
             });
         }
 

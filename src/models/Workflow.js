@@ -24,7 +24,7 @@ const WorkflowSchema = new mongoose.Schema({
       order: { type: Number, required: true },
       assignedRole: {
         type: String,
-        enum: ['admin', 'manager', 'employee'], 
+        enum: ['hr_manager', 'manager', 'employee'],
         required: true,
       },
       createdAt: { type: Date, default: Date.now },

@@ -5,9 +5,9 @@ const createNewWorkflow = async (req, res) => {
     const { name, description, steps } = req.body;
 
     // التحقق من صلاحية المستخدم
-    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+    if (req.user.role !== 'hr_manager' && req.user.role !== 'manager') {
       return res.status(403).json({ 
-        message: 'Only admins and managers can create workflows'
+    message: 'فقط hr_manager و manager يمكنهم إنشاء workflows'
       });
     }
 
@@ -81,7 +81,7 @@ const getSingleWorkflowById = async (req, res) => {
     }
 
     // 4️⃣ لو المستخدم مش Admin ولا صاحب الـworkflow → يمنع الوصول
-    if (req.user.role !== 'admin' && workflow.createdBy._id.toString() !== req.user.id) {
+    if (req.user.role !== 'hr_manager' && workflow.createdBy._id.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -107,7 +107,7 @@ const updateWorkflow = async (req, res) => {
     }
 
     // التحقق من الصلاحية: فقط الـadmin أو اللي أنشأه
-    if (req.user.role !== 'admin' && workflow.createdBy.toString() !== req.user.id) {
+    if (req.user.role !== 'hr_manager' && workflow.createdBy.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -138,7 +138,7 @@ const deleteWorkflow = async (req, res) => {
     }
 
     // نفس شرط الصلاحية
-    if (req.user.role !== 'admin' && workflow.createdBy.toString() !== req.user.id) {
+    if (req.user.role !== 'hr_manager' && workflow.createdBy.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

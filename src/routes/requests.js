@@ -8,16 +8,15 @@ const upload = require('../middlewares/uploadMiddleware');
 router.post(
   '/workflow/:workflowId',
   authMiddleware,
-  upload.fields([
-    { name: 'title', maxCount: 1 },
-    { name: 'description', maxCount: 1 },
-    { name: 'attachments', maxCount: 5 }
-  ]),
+  upload.array('attachments', 5),
   requestController.createNewRequest
 );
 
 // Get all requests
 router.get('/', authMiddleware, requestController.getAllRequests);
+
+// Get pending requests (must come before /:id to avoid conflict)
+router.get('/pending', authMiddleware, requestController.getPendingRequests);
 
 // Get single request
 router.get('/:id', authMiddleware, requestController.getSingleRequestById);

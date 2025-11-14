@@ -6,7 +6,8 @@
   "scripts": {
     "test": "jest --runInBand",
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "nodemon src/app.js",
+    "migrate:normalize-roles": "node scripts/normalizeRoles.js"
   },
   "keywords": [],
   "author": "",

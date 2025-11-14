@@ -35,7 +35,7 @@ exports.register = async (req, res) => {
     const hash = await bcrypt.hash(password, salt);
 
     // 4️⃣ نتأكد إن قيمة role مقبولة وإلا نستخدم 'employee' كافتراضي
-    const allowedRoles = ['admin', 'manager', 'employee'];
+    const allowedRoles = ['hr_manager', 'manager', 'employee'];
     const roleToUse = allowedRoles.includes(role) ? role : 'employee';
 
     // 5️⃣ ننشئ المستخدم الجديد
@@ -103,6 +103,17 @@ exports.login = async (req, res) => {
     );
 
     // 5️⃣ نحفظ آخر وقت دخول (اختياري)
+    // Normalize role on login to handle legacy values (e.g. "admin\n")
+    try {
+      if (user.role && typeof user.role === 'string') {
+        const trimmed = user.role.trim();
+        user.role = trimmed === 'admin' ? 'hr_manager' : trimmed;
+      }
+    } catch (e) {
+      // keep going; we'll still attempt to save lastLogin
+      console.warn('Role normalization failed:', e && e.message);
+    }
+
     user.lastLogin = new Date();
     await user.save();
 

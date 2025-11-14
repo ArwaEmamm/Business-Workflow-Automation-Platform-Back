@@ -25,8 +25,8 @@ const createActivityLog = async (req, res) => {
 
 const getAllLogs = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied: Admins only' });
+    if (req.user.role !== 'hr_manager') {
+      return res.status(403).json({ message: 'Access denied: hr_manager only' });
     }
 
     const logs = await ActivityLog.find()
