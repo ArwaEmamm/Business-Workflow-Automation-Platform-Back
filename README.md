@@ -89,38 +89,5 @@ db.requests.insertMany([
 ]);
 ```
 
-ملاحظات:
-- استبدلي `127.0.0.1:27017` و`bwa_dev` بقيم قاعدة بياناتك إذا اختلفت.
-- حقول `passwordHash` استخدمت نصًا بسيطًا `changeme` كمثال؛ في التطبيق الحقيقي يجب تخزين قيمة hash حقيقية (`bcrypt`).
-
-## (اختياري) إنشاء ملف seed محلي وتشغيله
-إذا تفضّلين سكربت Node يقوم بالاتصال وإدخال البيانات، يمكنك إنشاء ملف `scripts/seedDatabase.js` يتضمن منطق الاتصال وإدخال `insertMany`. مثال تشغيلي:
-
-```powershell
-# تشغيل سكربت seed (بعد إنشاءه داخل المشروع)
-node scripts/seedDatabase.js
-```
-
-أخبريني لو تريدين أن أُعيد إنشاء `scripts/seedDatabase.js` في المشروع وأضيف أمر `seed` إلى `package.json`، وسأفعله.
-
-## رفع المشروع إلى GitHub (PowerShell)
-إذا رغبتِ أن أرفع المستودع الحالي إلى GitHub تحت الـ URL الذي أعطيتِه، نفّذي هذه الأوامر محليًا (تحتاجين صلاحيات push إلى ذلك الريبو):
-
-```powershell
-git remote add origin https://github.com/ArwaEmamm/Business-Workflow-Automation-Platform-Back.git
-git branch -M main
-git add .
-git commit -m "Add README and seed instructions"
-git push -u origin main
-```
-
-ملاحظة: إذا حصل خطأ لأن الريبو البعيد يحتوي على كود بالفعل، استعملي `git pull --rebase origin main` أو حلّي التعارضات ثم ادفعي.
-
----
-
-## كيف أقدر أساعدك بعد كده؟
-- أقدر أُعيد إنشاء سكربت `scripts/seedDatabase.js` داخل المشروع وأضبط `package.json` لإضافة الأمر `seed`.
-- أقدر أُنشئ ملف `seed-mongo.js` جاهز لتشغيله مع `mongosh --file` لو تفضّلين عدم استخدام Node.
-- أقدر أساعد في رفع المشروع إلى GitHub لو سمحتِ لي بمعلومات الوصول أو تُنفّذي أوامر الدفع بنفسك وتُخبِريني إن ظهر خطأ.
-
-أخبِريني أي خيار تفضّلينه وسأكمل التنفيذ فورًا.
+.
+.
