@@ -1,230 +1,126 @@
-# 🧩 Business Workflow Automation (BWA)
+"""
+# 🧩 Business Workflow Automation (BWA) — Backend
 
-## 🚀 Project Overview
-Business Workflow Automation (BWA) هو نظام لإدارة وأتمتة العمليات الإدارية داخل الشركات الصغيرة والمتوسطة.
-يسمح للموظفين بإرسال الطلبات (مثل طلب إجازة أو شراء)، وللمدراء أو الإداريين بمراجعتها والموافقة عليها،
-مع وجود نظام إشعارات، وإحصائيات، وLogs لتتبع كل الأنشطة.
+## ملخص سريع
+هذا المستودع يحتوي على باك‑إند لـ Business Workflow Automation: نظام لإدارة الطلبات (إجازات، مشتريات، معدات، تدريب...) مع مسارات موافقة متعددة (Workflows)، إشعارات، وسجل نشاطات.
 
----
+الـ API مكتوب باستخدام Node.js وExpress، والـ persistence باستخدام MongoDB عبر Mongoose. يستخدم النظام طوابير (Bull + Redis) للمهام الخلفية مثل إرسال الإيميلات.
 
-## 🏗️ Tech Stack
+هذا الملف README يشرح كيف تهيّئ المشروع محليًا، كيف تعبّي الداتا (seed) من التيرمنال، وكيف ترفع الكود إلى GitHub إذا رغبت.
+"""
 
-| Layer | Technology | Purpose |
-|-------|-------------|----------|
-| **Frontend** | React + TypeScript *(to be developed)* | واجهة المستخدم |
-| **Backend** | Node.js (Express.js) | REST API |
-| **Database** | MongoDB (Mongoose ODM) | تخزين البيانات |
-| **Queue System** | Bull + Redis | Background Jobs (مثل إرسال الإيميلات) |
-| **Authentication** | JWT + bcrypt | تسجيل الدخول والصلاحيات |
-| **Testing** | Jest + Supertest | اختبار الـ APIs |
-| **Error Handling** | Custom Error Middleware (AppError) | إدارة الأخطاء بشكل احترافي |
+## متطلبات نظام
+- Node.js >= 16
+- npm
+- MongoDB محلي أو Remote/Atlas
+- (اختياري) Redis إذا أردت تشغيل الوظائف الخلفية
 
----
-
-## ⚙️ Features Implemented
-
-### 👥 Authentication & Authorization
-- تسجيل مستخدم جديد وتسجيل الدخول.
-- أدوار مختلفة (Admin / Manager / Employee).
-- JWT Tokens لحماية الـ APIs.
-- Middleware للتحقق من التوكن والصلاحيات.
-
-### 🔄 Workflow Management
-- إنشاء Workflow يحتوي على خطوات approvals.
-- CRUD كامل للـ Workflows.
-- تخصيص الأدوار لكل خطوة داخل الـ Workflow.
-
-### 📋 Request System
-- المستخدم يقدر يقدّم طلب بناءً على Workflow معين.
-- النظام بيتتبع الخطوة الحالية.
-- المدير أو الأدمن يقدر يوافق أو يرفض.
-- التحديث التلقائي لحالة الطلب (Pending → Approved / Rejected).
-
-### 🔔 Notifications
-- إشعارات عند الموافقة أو الرفض.
-- إرسال إيميل في الخلفية باستخدام Bull Queue + Redis.
-- تحديد الإشعار كمقروء.
-
-### 📊 Dashboard & Analytics
-- عرض ملخّص الإحصائيات (عدد الطلبات، حالة كل واحدة).
-- تختلف حسب الدور (Admin / Manager / Employee).
-
-### 🧾 Activity Logs
-- تتبع كل الأحداث (إنشاء، تعديل، حذف).
-- فقط الـ Admin يقدر يشوف السجل الكامل.
-
-### 📎 File Uploads
-- دعم رفع الملفات كمرفقات محلية.
-- استخدام multer للتعامل مع الملفات.
-
-### ⚙️ Error Handling
-- كلاس AppError لمعالجة الأخطاء المتوقعة.
-- Middleware موحّد للتعامل مع كل الأخطاء في النظام.
-
-### 🧠 Background Jobs
-- استخدام Bull Queue لإرسال الإشعارات والإيميلات في الخلفية بدون تعطيل المستخدم.
-
-### 🧪 Testing
-- اختبارات شاملة باستخدام Jest + Supertest.
-- اختبارات لـ Auth و Workflow APIs.
-
----
-
-## 📁 Project Structure
-
-```
-src/
- ├── config/
- │   └── db.js
- ├── controllers/
- │   ├── authController.js
- │   ├── workflowController.js
- │   ├── requestController.js
- │   ├── notificationController.js
- │   ├── dashboardController.js
- │   └── activityLogsController.js
- ├── jobs/
- │   └── emailQueue.js
- ├── middlewares/
- │   ├── authMiddleware.js
- │   ├── errorMiddleware.js
- │   └── ...
- ├── models/
- │   ├── User.js
- │   ├── Workflow.js
- │   ├── Request.js
- │   ├── Notification.js
- │   └── ActivityLog.js
- ├── routes/
- │   ├── auth.js
- │   └── routes.js
- ├── tests/
- │   ├── auth.test.js
- │   └── workflow.test.js
- └── app.js
-.env
-README.md
-```
-
----
-
-## 🧰 Installation & Setup
-
-```bash
-# Clone the repo
-git clone https://github.com/ArwaEmam/BWA-Backend.git
-cd BWA-Backend
-
-# Install dependencies
+## الإعداد السريع (PowerShell)
+1) انسخ المستودع وانصّب الحزم:
+```powershell
+git clone <your-repo-url-or-skip-if-already-cloned>
+cd bwa-backend
 npm install
+```
 
-# Create .env file
+2) أنشئ ملف `.env` في جذر المشروع واملأ القيم التالية (مثال):
+```
 PORT=4000
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_secret
+MONGO_HOST=127.0.0.1
+MONGO_PORT=27017
+MONGO_DB_NAME=bwa_dev
+# If your DB requires auth:
+# MONGO_USER=yourUser
+# MONGO_PASS=yourPass
+JWT_SECRET=your_jwt_secret
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
+```
 
-# Run server
+3) شغّل السيرفر في وضع التطوير:
+```powershell
 npm run dev
+```
 
-# Run tests
+4) شغّل الاختبارات:
+```powershell
 npm test
 ```
 
----
+## تعبئة البيانات (Seed) — أوامر `mongosh` من التيرمنال
+إليك مجموعة أوامر جاهزة لتشغيلها داخل `mongosh` على قاعدة بياناتك (مثال يُستخدم `bwa_dev`). افتحي PowerShell ثم:
 
-## 🛠️ Troubleshooting — MongoDB "authentication failed" (bad auth)
-
-If you see an error like:
-
-```
-❌ MongoDB connection failed: bad auth : authentication failed
+```powershell
+mongosh "mongodb://127.0.0.1:27017/bwa_dev"
 ```
 
-Follow these steps:
+وبعد فتح الـ shell، الصق هذه الأوامر (النسخة الموصى بها تستخدم ObjectId لعلاقات Mongoose):
 
-1. Check your `MONGO_URI` in your local `.env` file:
-	- Make sure it includes a valid username and password if your MongoDB requires authentication.
-	- Example format (with authSource):
-	  ```text
-	  mongodb://<username>:<password>@<host>:27017/<database>?authSource=admin
-	  ```
-	- If you use MongoDB Atlas, use the connection string provided by Atlas (paste it into `MONGO_URI`).
+```js
+// Users
+db.users.insertMany([
+	{ _id: ObjectId("64f001a1b9a1c4001a2b1111"), name: "Nada Ali", email: "nada.ali@company.com", role: "employee", passwordHash: "changeme" },
+	{ _id: ObjectId("64f001a1b9a1c4001a2b2222"), name: "Omar Hassan", email: "omar.hassan@company.com", role: "manager", passwordHash: "changeme" },
+	{ _id: ObjectId("64f001a1b9a1c4001a2b3333"), name: "Salma Rady", email: "salma.rady@company.com", role: "hr_manager", passwordHash: "changeme" }
+]);
 
-2. Quick local connection test (PowerShell):
-	- Temporarily set the env var and run a tiny Node test to see the error details:
-	  ```powershell
-	  $env:MONGO_URI='mongodb://user:pass@host:27017/dbname?authSource=admin'
-	  node -e "require('mongoose').connect(process.env.MONGO_URI).then(()=>console.log('OK')).catch(e=>{console.error(e); process.exit(1)})"
-	  ```
-	- This prints the driver error and helps identify whether the credentials, host, or network are the problem.
+// Workflows
+db.workflows.insertMany([
+	{
+		_id: ObjectId("64f002a1b9a1c4001a2b4001"),
+		name: "Vacation Request",
+		description: "طلب إجازة سنوية أو عاجلة",
+		createdBy: ObjectId("64f001a1b9a1c4001a2b3333"),
+		steps: [ { order:1, title: "Manager Approval", assignedRole: "manager" }, { order:2, title: "HR Approval", assignedRole: "hr_manager" } ]
+	},
+	{ _id: ObjectId("64f002a1b9a1c4001a2b4002"), name: "Purchase Request (<= $1000)", description: "طلبات مشتريات قيمتها أقل من أو تساوي 1000$", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Manager Approval", assignedRole:"manager" } ] },
+	{ _id: ObjectId("64f002a1b9a1c4001a2b4003"), name: "Equipment Request (Laptop)", description: "طلب جهاز لابتوب جديد أو استبدال", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Team Lead Approval", assignedRole:"manager" }, { order:2, title:"HR Approval", assignedRole:"hr_manager" } ] },
+	{ _id: ObjectId("64f002a1b9a1c4001a2b4004"), name: "Remote Work Day", description: "طلب يوم عمل عن بُعد", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Manager Approval", assignedRole:"manager" } ] },
+	{ _id: ObjectId("64f002a1b9a1c4001a2b4005"), name: "Training Enrollment", description: "طلب اشتراك في دورة تدريبية", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Manager Approval", assignedRole:"manager" }, { order:2, title:"HR Approval", assignedRole:"hr_manager" } ] }
+]);
 
-3. Common causes & fixes:
-	- Wrong username/password — re-create or reset the database user and try again.
-	- Wrong authSource — many managed MongoDBs require `authSource=admin` or a specific DB for authentication.
-	- IP whitelist/network — ensure your machine's IP (or CI runner) is allowed by the DB server (Atlas has IP whitelist).
-	- Connection string encoding — if your password contains special characters, URL-encode them.
+// Requests
+db.requests.insertMany([
+	{ _id: "req_1001", workflowId: ObjectId("64f002a1b9a1c4001a2b4001"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data: { title: "Annual Leave - Summer", from: "2025-07-20", to: "2025-07-28", reason: "Family vacation" }, currentStep:2, status:"pending", attachments:["/mnt/data/c76a4bfd-14d1-4783-a2c8-094a1a1048ca.png"], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"approved", comment:"Enjoy your leave; ensure handover done", date: ISODate("2025-06-05T10:30:00Z") } ], createdAt: ISODate("2025-06-05T09:00:00Z") },
+	{ _id: "req_1002", workflowId: ObjectId("64f002a1b9a1c4001a2b4002"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"Office Supplies - Headset", amount:45.99, vendor:"TechStore", reason:"Replacement headset" }, currentStep:1, status:"approved", attachments:[], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"approved", comment:"Ok, within budget", date: ISODate("2025-06-06T14:20:00Z") } ], createdAt: ISODate("2025-06-06T13:55:00Z") },
+	{ _id: "req_1003", workflowId: ObjectId("64f002a1b9a1c4001a2b4003"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"Laptop Replacement", spec:"Dell XPS 13", reason:"Old laptop malfunctioning" }, currentStep:1, status:"rejected", attachments:["/mnt/data/c76a4bfd-14d1-4783-a2c8-094a1a1048ca.png"], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"rejected", comment:"Budget constraints — postpone", date: ISODate("2025-06-07T08:15:00Z") } ], createdAt: ISODate("2025-06-07T07:50:00Z") },
+	{ _id: "req_1004", workflowId: ObjectId("64f002a1b9a1c4001a2b4004"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"Work from Home - Monday", date:"2025-06-10", reason:"Home delivery appointment" }, currentStep:1, status:"pending", attachments:[], approvals:[], createdAt: ISODate("2025-06-08T11:22:00Z") },
+	{ _id: "req_1005", workflowId: ObjectId("64f002a1b9a1c4001a2b4005"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"React Advanced Course", provider:"Online Academy", cost:300 }, currentStep:2, status:"pending", attachments:[], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"approved", comment:"Great fit for the role", date: ISODate("2025-06-09T09:00:00Z") } ], createdAt: ISODate("2025-06-09T08:45:00Z") }
+]);
+```
 
-4. If `.env` was accidentally pushed previously:
-	- Treat those credentials as compromised: rotate the DB user password and any keys that were exposed.
-	- We removed `.env` from tracking and added it to `.gitignore` — if you want to purge the secret from repo history I can prepare `BFG` or `git filter-repo` steps (this requires force-push and all collaborators to re-clone).
+ملاحظات:
+- استبدلي `127.0.0.1:27017` و`bwa_dev` بقيم قاعدة بياناتك إذا اختلفت.
+- حقول `passwordHash` استخدمت نصًا بسيطًا `changeme` كمثال؛ في التطبيق الحقيقي يجب تخزين قيمة hash حقيقية (`bcrypt`).
 
-5. Still failing? Share (safely) the connection string host and sanitized error message and I can help diagnose (don't paste secrets).
+## (اختياري) إنشاء ملف seed محلي وتشغيله
+إذا تفضّلين سكربت Node يقوم بالاتصال وإدخال البيانات، يمكنك إنشاء ملف `scripts/seedDatabase.js` يتضمن منطق الاتصال وإدخال `insertMany`. مثال تشغيلي:
+
+```powershell
+# تشغيل سكربت seed (بعد إنشاءه داخل المشروع)
+node scripts/seedDatabase.js
+```
+
+أخبريني لو تريدين أن أُعيد إنشاء `scripts/seedDatabase.js` في المشروع وأضيف أمر `seed` إلى `package.json`، وسأفعله.
+
+## رفع المشروع إلى GitHub (PowerShell)
+إذا رغبتِ أن أرفع المستودع الحالي إلى GitHub تحت الـ URL الذي أعطيتِه، نفّذي هذه الأوامر محليًا (تحتاجين صلاحيات push إلى ذلك الريبو):
+
+```powershell
+git remote add origin https://github.com/ArwaEmamm/Business-Workflow-Automation-Platform-Back.git
+git branch -M main
+git add .
+git commit -m "Add README and seed instructions"
+git push -u origin main
+```
+
+ملاحظة: إذا حصل خطأ لأن الريبو البعيد يحتوي على كود بالفعل، استعملي `git pull --rebase origin main` أو حلّي التعارضات ثم ادفعي.
 
 ---
 
-Tip: I've added a `.env.example` file to the repo with placeholders for the required environment variables. Copy it to `.env` and fill real values.
+## كيف أقدر أساعدك بعد كده؟
+- أقدر أُعيد إنشاء سكربت `scripts/seedDatabase.js` داخل المشروع وأضبط `package.json` لإضافة الأمر `seed`.
+- أقدر أُنشئ ملف `seed-mongo.js` جاهز لتشغيله مع `mongosh --file` لو تفضّلين عدم استخدام Node.
+- أقدر أساعد في رفع المشروع إلى GitHub لو سمحتِ لي بمعلومات الوصول أو تُنفّذي أوامر الدفع بنفسك وتُخبِريني إن ظهر خطأ.
 
----
-
-## ✅ API Highlights
-
-| Method | Endpoint | Description | Auth |
-|--------|-----------|--------------|------|
-| POST | /api/auth/register | Register user | ❌ |
-| POST | /api/auth/login | Login user | ❌ |
-| POST | /api/workflows | Create workflow | ✅ |
-| GET | /api/workflows | Get all workflows | ✅ |
-| POST | /api/requests | Create request | ✅ |
-| POST | /api/requests/:id/approve | Approve/Reject | ✅ |
-| GET | /api/notifications | Get notifications | ✅ |
-| GET | /api/dashboard | Get user dashboard | ✅ |
-
----
-
-## 💬 Future Enhancements
-- Frontend (React + TypeScript)
-- Real Email Integration (nodemailer)
-- Docker support
-- Cloudinary for file uploads
-- Admin panel UI
-
-🧩 Background Jobs (Redis + Bull)
-
-تم استخدام Redis مع مكتبة Bull لتنفيذ المهام في الخلفية (Background Jobs) بدل ما تتنفذ بشكل متزامن وتبطّئ المستخدم.
-
-🔧 الفكرة
-
-لما المستخدم يطلب مهمة تقيلة (زي إرسال إيميل أو إشعار)، بدل ما السيرفر يستنى لحد ما المهمة تخلص، بيضيفها في الطابور (Queue) وبيكمل التنفيذ فورًا.
-عامل زي:
-
-"تم استلام الطلب — هنكمل التنفيذ في الخلفية."
-
-⚙️ التشغيل
-
-تأكد إن Redis شغّال:
-
-لو نزلته على ويندوز، شغّله من المسار:
-
-redis-server.exe
-
-
-شغّل السيرفر الرئيسي:
-
-npm run dev
-
-
-شغّل الـ Worker (ملف الـ job):
-
-node src/jobs/emailWorker.js
+أخبِريني أي خيار تفضّلينه وسأكمل التنفيذ فورًا.
