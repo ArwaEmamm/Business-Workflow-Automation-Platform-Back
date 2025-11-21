@@ -1,7 +1,7 @@
 🚀 I just built a full Workflow Management System from scratch!
 A complete system that handles employee requests, approvals, workflows, notifications, and role-based access — all designed to simulate a real company environment.
 
-🔥 What the system does:
+ What the system does:
 
 Employees can submit different types of requests (Leave, Salary Raise, WFH, Laptop Request…)
 
