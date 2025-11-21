@@ -1,93 +1,84 @@
-"""
-# 🧩 Business Workflow Automation (BWA) — Backend
+🚀 I just built a full Workflow Management System from scratch!
+A complete system that handles employee requests, approvals, workflows, notifications, and role-based access — all designed to simulate a real company environment.
 
-## ملخص سريع
-هذا المستودع يحتوي على باك‑إند لـ Business Workflow Automation: نظام لإدارة الطلبات (إجازات، مشتريات، معدات، تدريب...) مع مسارات موافقة متعددة (Workflows)، إشعارات، وسجل نشاطات.
+🔥 What the system does:
 
-الـ API مكتوب باستخدام Node.js وExpress، والـ persistence باستخدام MongoDB عبر Mongoose. يستخدم النظام طوابير (Bull + Redis) للمهام الخلفية مثل إرسال الإيميلات.
+Employees can submit different types of requests (Leave, Salary Raise, WFH, Laptop Request…)
 
-هذا الملف README يشرح كيف تهيّئ المشروع محليًا، كيف تعبّي الداتا (seed) من التيرمنال، وكيف ترفع الكود إلى GitHub إذا رغبت.
-"""
+Managers review and approve/decline requests
 
-## متطلبات نظام
-- Node.js >= 16
-- npm
-- MongoDB محلي أو Remote/Atlas
-- (اختياري) Redis إذا أردت تشغيل الوظائف الخلفية
+Admin/HR can take final decisions and view the full system status
 
-## الإعداد السريع (PowerShell)
-1) انسخ المستودع وانصّب الحزم:
-```powershell
-git clone <your-repo-url-or-skip-if-already-cloned>
-cd bwa-backend
-npm install
-```
+Dynamic workflows: each request follows multiple approval steps depending on its type
 
-2) أنشئ ملف `.env` في جذر المشروع واملأ القيم التالية (مثال):
-```
-PORT=4000
-MONGO_HOST=127.0.0.1
-MONGO_PORT=27017
-MONGO_DB_NAME=bwa_dev
-# If your DB requires auth:
-# MONGO_USER=yourUser
-# MONGO_PASS=yourPass
-JWT_SECRET=your_jwt_secret
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-```
+Real-time notifications system
 
-3) شغّل السيرفر في وضع التطوير:
-```powershell
-npm run dev
-```
+Dashboard for every role: Admin – Manager – Employee
 
-4) شغّل الاختبارات:
-```powershell
-npm test
-```
+🛠️ Tech Stack I Used
+Backend (Node.js + Express + MongoDB):
 
-## تعبئة البيانات (Seed) — أوامر `mongosh` من التيرمنال
-إليك مجموعة أوامر جاهزة لتشغيلها داخل `mongosh` على قاعدة بياناتك (مثال يُستخدم `bwa_dev`). افتحي PowerShell ثم:
+JWT Authentication + Role-Based Access Control (RBAC)
 
-```powershell
-mongosh "mongodb://127.0.0.1:27017/bwa_dev"
-```
+RESTful API architecture
 
-وبعد فتح الـ shell، الصق هذه الأوامر (النسخة الموصى بها تستخدم ObjectId لعلاقات Mongoose):
+MongoDB & Mongoose
 
-```js
-// Users
-db.users.insertMany([
-	{ _id: ObjectId("64f001a1b9a1c4001a2b1111"), name: "Nada Ali", email: "nada.ali@company.com", role: "employee", passwordHash: "changeme" },
-	{ _id: ObjectId("64f001a1b9a1c4001a2b2222"), name: "Omar Hassan", email: "omar.hassan@company.com", role: "manager", passwordHash: "changeme" },
-	{ _id: ObjectId("64f001a1b9a1c4001a2b3333"), name: "Salma Rady", email: "salma.rady@company.com", role: "hr_manager", passwordHash: "changeme" }
-]);
+Background Jobs with BullMQ + Redis
 
-// Workflows
-db.workflows.insertMany([
-	{
-		_id: ObjectId("64f002a1b9a1c4001a2b4001"),
-		name: "Vacation Request",
-		description: "طلب إجازة سنوية أو عاجلة",
-		createdBy: ObjectId("64f001a1b9a1c4001a2b3333"),
-		steps: [ { order:1, title: "Manager Approval", assignedRole: "manager" }, { order:2, title: "HR Approval", assignedRole: "hr_manager" } ]
-	},
-	{ _id: ObjectId("64f002a1b9a1c4001a2b4002"), name: "Purchase Request (<= $1000)", description: "طلبات مشتريات قيمتها أقل من أو تساوي 1000$", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Manager Approval", assignedRole:"manager" } ] },
-	{ _id: ObjectId("64f002a1b9a1c4001a2b4003"), name: "Equipment Request (Laptop)", description: "طلب جهاز لابتوب جديد أو استبدال", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Team Lead Approval", assignedRole:"manager" }, { order:2, title:"HR Approval", assignedRole:"hr_manager" } ] },
-	{ _id: ObjectId("64f002a1b9a1c4001a2b4004"), name: "Remote Work Day", description: "طلب يوم عمل عن بُعد", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Manager Approval", assignedRole:"manager" } ] },
-	{ _id: ObjectId("64f002a1b9a1c4001a2b4005"), name: "Training Enrollment", description: "طلب اشتراك في دورة تدريبية", createdBy: ObjectId("64f001a1b9a1c4001a2b3333"), steps: [ { order:1, title:"Manager Approval", assignedRole:"manager" }, { order:2, title:"HR Approval", assignedRole:"hr_manager" } ] }
-]);
+Email notifications queue (async + scalable)
 
-// Requests
-db.requests.insertMany([
-	{ _id: "req_1001", workflowId: ObjectId("64f002a1b9a1c4001a2b4001"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data: { title: "Annual Leave - Summer", from: "2025-07-20", to: "2025-07-28", reason: "Family vacation" }, currentStep:2, status:"pending", attachments:["/mnt/data/c76a4bfd-14d1-4783-a2c8-094a1a1048ca.png"], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"approved", comment:"Enjoy your leave; ensure handover done", date: ISODate("2025-06-05T10:30:00Z") } ], createdAt: ISODate("2025-06-05T09:00:00Z") },
-	{ _id: "req_1002", workflowId: ObjectId("64f002a1b9a1c4001a2b4002"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"Office Supplies - Headset", amount:45.99, vendor:"TechStore", reason:"Replacement headset" }, currentStep:1, status:"approved", attachments:[], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"approved", comment:"Ok, within budget", date: ISODate("2025-06-06T14:20:00Z") } ], createdAt: ISODate("2025-06-06T13:55:00Z") },
-	{ _id: "req_1003", workflowId: ObjectId("64f002a1b9a1c4001a2b4003"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"Laptop Replacement", spec:"Dell XPS 13", reason:"Old laptop malfunctioning" }, currentStep:1, status:"rejected", attachments:["/mnt/data/c76a4bfd-14d1-4783-a2c8-094a1a1048ca.png"], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"rejected", comment:"Budget constraints — postpone", date: ISODate("2025-06-07T08:15:00Z") } ], createdAt: ISODate("2025-06-07T07:50:00Z") },
-	{ _id: "req_1004", workflowId: ObjectId("64f002a1b9a1c4001a2b4004"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"Work from Home - Monday", date:"2025-06-10", reason:"Home delivery appointment" }, currentStep:1, status:"pending", attachments:[], approvals:[], createdAt: ISODate("2025-06-08T11:22:00Z") },
-	{ _id: "req_1005", workflowId: ObjectId("64f002a1b9a1c4001a2b4005"), createdBy: ObjectId("64f001a1b9a1c4001a2b1111"), data:{ title:"React Advanced Course", provider:"Online Academy", cost:300 }, currentStep:2, status:"pending", attachments:[], approvals:[ { stepOrder:1, approvedBy: ObjectId("64f001a1b9a1c4001a2b2222"), decision:"approved", comment:"Great fit for the role", date: ISODate("2025-06-09T09:00:00Z") } ], createdAt: ISODate("2025-06-09T08:45:00Z") }
-]);
-```
+Secure middleware & validations
 
-.
-.
+Swagger API documentation
+
+Frontend (React):
+
+Reusable UI components
+
+Role-based dashboards
+
+Modern routing & protected routes
+
+Fully dynamic request/workflow pages
+
+Real-time notifications view
+
+Clean and organized UI/UX
+
+🔔 Notifications System
+
+Built a complete notifications module:
+
+Save notifications in DB
+
+Real-time fetching for each user
+
+Mark as read
+
+Triggered automatically on request status changes
+
+Processed using background jobs to avoid blocking the main server
+
+⚙️ Background Jobs / Queue System
+
+Implemented BullMQ + Redis to handle:
+
+Sending emails
+
+Creating notifications
+
+Processing multi-step workflows
+
+Handling heavy logic outside main request/response flow
+
+This improved the system performance massively and made everything more scalable.
+
+📚 What I Learned
+
+✔ Structuring large Node.js applications
+✔ Designing enterprise-level workflow logic
+✔ Working with queues & Redis
+✔ Role-based routing & UI separation in React
+✔ Building scalable backend features
+✔ Writing clean, reusable frontend components
